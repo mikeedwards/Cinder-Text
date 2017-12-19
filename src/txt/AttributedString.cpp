@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <memory>
+#include <regex>
 
 #include "rapidxml\rapidxml_print.hpp"
 
@@ -158,7 +159,29 @@ namespace txt
 		std::string wrappedText = "<txt>" + textToParse + "</txt>";
 		xml_document<> doc;
 		char* cstr = &wrappedText[0u];
-		doc.parse<0>( cstr );
+
+		try {
+			doc.parse<0>( cstr );
+		}
+		catch( const rapidxml::parse_error& e ) {
+			std::cerr << "Parse error was: " << e.what() << std::endl;
+
+			std::regex brTags( "<br[^<]*>" );
+			std::string newlinedText;
+			std::regex_replace( std::back_inserter( newlinedText ), wrappedText.begin(), wrappedText.end(), brTags, "\n" );
+
+			std::regex tags( "<[^<]*>" );
+			std::string cleanedText;
+
+			std::regex_replace( std::back_inserter( cleanedText ), newlinedText.begin(), newlinedText.end(), tags, "" );
+
+			std::string rewrappedText = "<txt>" + cleanedText + "</txt>";
+
+			cstr = &rewrappedText[0u];
+
+			doc.parse<0>( cstr );
+		}
+
 		xml_node<>* node = doc.first_node( "txt" );
 
 		parseNode( node );
